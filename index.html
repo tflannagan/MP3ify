@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MP3ify | Ty</title>
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Parkinsans:wght@300..800&display=swap" rel="stylesheet">
+      
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+    <style>
+        :root {
+            --primary: #007AFF;
+            --primary-dark: #0056b3;
+            --success: #34C759;
+            --error: #FF3B30;
+            --background: #F2F2F7;
+            --card: #FFFFFF;
+            --text: #1C1C1E;
+            --text-secondary: #6C6C70;
+            --border: #E5E5EA;
+            --shadow: rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Parkinsans", sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.5;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .download-btn {
+            background: var(--success);
+            border: none;
+            border-radius: 12px;
+            padding: 0.8rem 1.5rem;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: none;
+        }
+
+        .download-btn:hover {
+            background: #2aa04a;
+            transform: translateY(-1px);
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            box-shadow: 0 2px 8px var(--shadow);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .instructions {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .instructions ul {
+            margin-left: 1.5rem;
+        }
+
+        .instructions li {
+            margin: 0.5rem 0;
+        }
+
+        .settings {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: var(--background);
+            border-radius: 12px;
+        }
+
+        .settings-group {
+            margin-bottom: 1rem;
+        }
+
+        .settings-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .settings-group select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--card);
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border);
+            padding: 2rem;
+            text-align: center;
+            border-radius: 16px;
+            background: var(--card);
+            transition: all 0.3s ease;
+        }
+
+        .upload-zone.drag-over {
+            border-color: var(--primary);
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        .upload-zone p {
+            color: var(--text-secondary);
+            margin: 1rem 0;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .audio-preview {
+            margin: 1rem 0;
+            width: 100%;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .notification.success {
+            background: var(--success);
+        }
+
+        .notification.error {
+            background: var(--error);
+        }
+
+        .notification.visible {
+            opacity: 1;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>MP3ify</h1>
+            <button class="download-btn" id="downloadBtn">
+                Download MP3
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="instructions">
+                <ul>
+                    <li>Upload a WAV file to convert to MP3</li>
+                    <li>Adjust the quality settings below</li>
+                    <li>Preview the audio using the player</li>
+                    <li>Download the converted MP3 file</li>
+                </ul>
+            </div>
+
+            <div class="settings">
+                <div class="settings-group">
+                    <label for="bitrate">MP3 Bitrate</label>
+                    <select id="bitrate">
+                        <option value="320">320 kbps (Highest Quality)</option>
+                        <option value="256">256 kbps (High Quality)</option>
+                        <option value="192" selected>192 kbps (Good Quality)</option>
+                        <option value="128">128 kbps (Standard Quality)</option>
+                        <option value="96">96 kbps (Low Quality)</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label for="sampleRate">Sample Rate</label>
+                    <select id="sampleRate">
+                        <option value="44100" selected>44.1 kHz (CD Quality)</option>
+                        <option value="48000">48 kHz (DAT Quality)</option>
+                        <option value="32000">32 kHz (FM Radio Quality)</option>
+                        <option value="22050">22.05 kHz (Low Quality)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="upload-zone" id="dropZone">
+                <p>Drag and drop your WAV file here or</p>
+                <input type="file" id="fileInput" accept=".wav" style="display: none;">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+            </div>
+
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+
+            <audio id="audioPreview" controls class="audio-preview" style="display: none;"></audio>
+        </div>
+    </div>
+
+    <div id="successMsg" class="notification success">Conversion complete!</div>
+    <div id="errorMsg" class="notification error"></div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const successMsg = document.getElementById('successMsg');
+        const audioPreview = document.getElementById('audioPreview');
+        const progressBar = document.getElementById('progressBar');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const bitrateSelect = document.getElementById('bitrate');
+        const sampleRateSelect = document.getElementById('sampleRate');
+
+        let mp3Data = null;
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        dropZone.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFileSelect, false);
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function highlight(e) {
+            dropZone.classList.add('drag-over');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const file = dt.files[0];
+            handleFile(file);
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            handleFile(file);
+        }
+
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorMsg.classList.add('visible');
+            successMsg.classList.remove('visible');
+            setTimeout(() => {
+                errorMsg.classList.remove('visible');
+            }, 3000);
+        }
+
+        function showSuccess(message) {
+            successMsg.textContent = message;
+            successMsg.classList.add('visible');
+            errorMsg.classList.remove('visible');
+            setTimeout(() => {
+                successMsg.classList.remove('visible');
+            }, 3000);
+        }
+
+        async function handleFile(file) {
+          if (!file) return;
+          
+          if (file.type !== 'audio/wav') {
+              showError('Please upload a WAV file');
+              return;
+          }
+      
+          progressBar.style.display = 'block';
+          progressBarFill.style.width = '0%';
+          downloadBtn.style.display = 'none';
+          audioPreview.style.display = 'none';
+          
+          try {
+              const arrayBuffer = await file.arrayBuffer();
+              const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+              const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+              
+              // Convert to MP3
+              mp3Data = await convertToMP3(audioBuffer);
+              
+              // Create preview
+              const blob = new Blob([mp3Data], { type: 'audio/mp3' });
+              const url = URL.createObjectURL(blob);
+              audioPreview.src = url;
+              audioPreview.style.display = 'block';
+              
+              // Enable download
+              downloadBtn.style.display = 'block';
+              downloadBtn.onclick = () => {
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = file.name.replace('.wav', '.mp3');
+                  a.click();
+                  URL.revokeObjectURL(url);
+              };
+              
+              showSuccess('Conversion complete!');
+          } catch (error) {
+              console.error('Conversion error:', error);
+              showError('Error converting file: ' + error.message);
+              audioPreview.style.display = 'none';
+              downloadBtn.style.display = 'none';
+          } finally {
+              progressBar.style.display = 'none';
+          }
+      }
+      
+      function convertToMP3(audioBuffer) {
+          return new Promise((resolve, reject) => {
+              try {
+                  const bitrate = parseInt(bitrateSelect.value);
+                  const sampleRate = parseInt(sampleRateSelect.value);
+                  const channels = audioBuffer.numberOfChannels;
+                  
+                  // Get audio data
+                  const left = audioBuffer.getChannelData(0);
+                  const right = channels > 1 ? audioBuffer.getChannelData(1) : new Float32Array(left.length);
+                  
+                  // Initialize encoder
+                  const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, bitrate);
+                  const mp3Data = [];
+                  
+                  // Process in chunks
+                  const sampleBlockSize = 1152;
+                  const numBlocks = Math.ceil(left.length / sampleBlockSize);
+                  
+                  for (let i = 0; i < numBlocks; i++) {
+                      const leftChunk = new Int16Array(sampleBlockSize);
+                      const rightChunk = new Int16Array(sampleBlockSize);
+                      
+                      for (let j = 0; j < sampleBlockSize; j++) {
+                          const idx = i * sampleBlockSize + j;
+                          if (idx < left.length) {
+                              // Convert float32 to int16
+                              leftChunk[j] = convert(left[idx]);
+                              rightChunk[j] = channels > 1 ? convert(right[idx]) : convert(left[idx]);
+                          }
+                      }
+                      
+                      // Update progress
+                      const progress = Math.min(100, Math.round((i / numBlocks) * 100));
+                      progressBarFill.style.width = `${progress}%`;
+                      
+                      // Encode
+                      let mp3buf;
+                      if (channels === 1) {
+                          mp3buf = mp3encoder.encodeBuffer(leftChunk);
+                      } else {
+                          mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+                      }
+                      
+                      if (mp3buf.length > 0) {
+                          mp3Data.push(mp3buf);
+                      }
+                  }
+                  
+                  // Get the last chunk
+                  const mp3buf = mp3encoder.flush();
+                  if (mp3buf.length > 0) {
+                      mp3Data.push(mp3buf);
+                  }
+                  
+                  // Combine chunks
+                  const totalLength = mp3Data.reduce((acc, buf) => acc + buf.length, 0);
+                  const mp3Buffer = new Uint8Array(totalLength);
+                  let offset = 0;
+                  for (const buf of mp3Data) {
+                      mp3Buffer.set(buf, offset);
+                      offset += buf.length;
+                  }
+                  
+                  resolve(mp3Buffer);
+              } catch (error) {
+                  reject(error);
+              }
+          });
+      }
+      
+      // Helper function to convert float32 to int16
+      function convert(sample) {
+          // Clamp between -1 and 1
+          const clamped = Math.max(-1, Math.min(1, sample));
+          // Convert to int16
+          return clamped < 0 ? clamped * 0x8000 : clamped * 0x7FFF;
+      }
+    
+    </script>
+</body>
+</html>
